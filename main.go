@@ -5,7 +5,6 @@ import (
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
-	"strconv"
 )
 
 var upgrader = websocket.Upgrader{
@@ -45,7 +44,7 @@ func newWsConnection(conn *websocket.Conn) {
 		}
 		gameId++
 		log.Println(string(p))
-		if err := conn.WriteMessage(messageType, []byte(strconv.Itoa(gameId))); err != nil {
+		if err := conn.WriteMessage(messageType, p); err != nil {
 
 			log.Println(err)
 		}
