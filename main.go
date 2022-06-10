@@ -126,7 +126,6 @@ func main() {
 		WriteTimeout: 1 * time.Minute,
 		ReadTimeout:  1 * time.Minute,
 	}
-	cors.
 
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
