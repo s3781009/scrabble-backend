@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
@@ -16,15 +17,32 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
+type Tile struct {
+	Char  rune `json:"char"`
+	Value int  `json:"value"`
+}
+type Player struct {
+	Name string `json:"name"`
+	Hand []Tile `json:"hand"`
+}
+type Game struct {
+	Players []Player `json:"players"`
+	Board   []Tile   `json:"board"`
+	Id      int      `json:"id"`
+}
+
 //routes handlers
 func setupRoutes() {
 
+	//should allow players to play the game modifying the tiles in the tile bag
 	http.HandleFunc("/play", func(w http.ResponseWriter, r *http.Request) {
 		_, err := fmt.Fprintf(w, "Hello!")
 		if err != nil {
 			fmt.Println(err)
 		}
 	})
+
+	//sets up socket connection to allow user to enter a game code and verify the game code
 	http.HandleFunc("/join", func(w http.ResponseWriter, r *http.Request) {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 		ws, err := upgrader.Upgrade(w, r, nil)
@@ -35,25 +53,28 @@ func setupRoutes() {
 		joinGame(ws)
 	})
 
-	//sets up a wb conenction upgrading hte
+	//sets up a web socket connection upgrading the http route
 	http.HandleFunc("/new", func(w http.ResponseWriter, r *http.Request) {
-		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-		ws, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			log.Println(err)
+		if r.Method == "GET" {
+			//create an instance of the game and send json to client
+			game := Game{Players: nil, Board: nil, Id: newGameId()}
+			jsonGame, err := json.Marshal(game)
+			if err != nil {
+				log.Println(err)
+			}
+			_, err = w.Write(jsonGame)
+			if err != nil {
+				log.Println(err)
+			}
 		}
-		log.Println("succesfully connected ...")
-		newWsConnection(ws)
 	})
 }
 
 func newGameId() int {
-	min := 1
-	max := 5
 	// set seed
 	rand.Seed(time.Now().UnixNano())
 	// generate random number and print on console
-	gameCode := rand.Intn(max - min)
+	gameCode := rand.Intn(10000000)
 	fmt.Println(gameCode)
 	return gameCode
 }
@@ -97,7 +118,7 @@ func main() {
 	setupRoutes()
 	fmt.Println("Starting server at port at " + os.Getenv("PORT"))
 	srv := http.Server{
-		Addr:         ":" + os.Getenv("PORT"),
+		Addr:         ":8080",
 		WriteTimeout: 1 * time.Minute,
 		ReadTimeout:  1 * time.Minute,
 	}
