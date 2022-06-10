@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 var upgrader = websocket.Upgrader{
@@ -58,7 +59,12 @@ func main() {
 
 	setupRoutes()
 	fmt.Println("Starting server at port at " + os.Getenv("PORT"))
-	if err := http.ListenAndServe(":"+os.Getenv("PORT"), nil); err != nil {
+	srv := http.Server{
+		Addr:         ":" + os.Getenv("PORT"),
+		WriteTimeout: 1 * time.Minute,
+		ReadTimeout:  1 * time.Minute,
+	}
+	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }
