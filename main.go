@@ -58,7 +58,7 @@ func main() {
 
 	setupRoutes()
 	fmt.Println("Starting server at port at " + os.Getenv("PORT"))
-	if err := http.ListenAndServe(os.Getenv("PORT"), nil); err != nil {
+	if err := http.ListenAndServe(":"+os.Getenv("PORT"), nil); err != nil {
 		log.Fatal(err)
 	}
 }
