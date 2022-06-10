@@ -55,6 +55,7 @@ func setupRoutes() {
 
 	//sets up a web socket connection upgrading the http route
 	http.HandleFunc("/new", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
 		if r.Method == "GET" {
 			//create an instance of the game and send json to client
 			game := Game{Players: nil, Board: nil, Id: newGameId()}
@@ -112,6 +113,9 @@ func newWsConnection(conn *websocket.Conn) {
 		}
 	}
 }
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
 
 func main() {
 
@@ -122,6 +126,7 @@ func main() {
 		WriteTimeout: 1 * time.Minute,
 		ReadTimeout:  1 * time.Minute,
 	}
+	cors.
 
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
