@@ -23,6 +23,7 @@ type Tile struct {
 	Value int    `json:"value"`
 }
 type Player struct {
+	Id   string `json:"id"`
 	Name string `json:"name"`
 	Hand []Tile `json:"hand"`
 }
@@ -30,6 +31,14 @@ type Game struct {
 	Players []Player `json:"players"`
 	Board   []Tile   `json:"board"`
 	Id      int      `json:"id"`
+}
+
+func GetIPAndUserAgent(r *http.Request) (ip string, user_agent string) {
+	ip = r.RemoteAddr
+	user_agent = r.UserAgent()
+
+	return ip, user_agent
+
 }
 
 //routes handlers
@@ -50,15 +59,24 @@ func setupRoutes() {
 		if err != nil {
 			log.Println(err)
 		}
-		joinGame(ws, games)
+		wsHandler(ws, &games)
 	})
 
 	//sets up a web socket connection upgrading the http route
 	http.HandleFunc("/new", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
 		if r.Method == "GET" {
+			clientIP, _ := GetIPAndUserAgent(r)
 			//create an instance of the game and send json to client
-			game := Game{Players: nil, Board: nil, Id: newGameId()}
+			fmt.Println(clientIP)
+			newPlayer := Player{
+				Id:   clientIP,
+				Name: "",
+				Hand: nil,
+			}
+			players := []Player{newPlayer}
+			var board []Tile
+			game := Game{Players: players, Board: board, Id: newGameId()}
 			games = append(games, game)
 			jsonGame, err := json.Marshal(game)
 			if err != nil {
@@ -84,7 +102,7 @@ func newGameId() int {
 func loadTiles() []Tile {
 	file, err := os.ReadFile("ScrabbleTiles.txt")
 	if err != nil {
-		log.Println(err)
+		log.Println("could not load tiles")
 	}
 	s := strings.Split(string(file), "\n")
 	var tiles []Tile
@@ -103,66 +121,62 @@ func loadTiles() []Tile {
 }
 
 //join game using message from client
-func joinGame(conn *websocket.Conn, games []Game) {
+func wsHandler(conn *websocket.Conn, games *[]Game) {
+	//tile bag should not be sent to the players to prevent cheating, initial loading of tile bag
 	tiles := loadTiles()
-
 	for {
-		jsonTiles, err := json.Marshal(tiles)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
+		//waits for message from client to execute the loop
 		messageType, msg, err := conn.ReadMessage()
-
 		if err != nil {
 			log.Println(err)
 			return
 		}
-
 		gameCode, err := strconv.Atoi(string(msg))
-
 		if err != nil {
 			log.Println(err)
 			return
 		}
-
-		for i := 0; i < len(games); i++ {
-			if games[i].Id == gameCode {
-				if err := conn.WriteMessage(messageType, jsonTiles); err != nil {
-					log.Println(err)
-					return
-				}
+		foundGameCode := false
+		for i := 0; i < len(*games); i++ {
+			if (*games)[i].Id == gameCode {
+				foundGameCode = true
 			}
 		}
-
-		err = conn.WriteMessage(messageType, []byte("no game cod"))
-		if err != nil {
-			return
+		if foundGameCode {
+			replacementTiles := draw(7, &tiles)
+			jsonPlayer, err := json.Marshal(
+				Player{
+					Name: "DEFAULT1",
+					Hand: replacementTiles,
+				},
+			)
+			err = conn.WriteMessage(messageType, jsonPlayer)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		} else {
+			err = conn.WriteMessage(messageType, []byte("no game code found"))
+			if err != nil {
+				log.Println(err)
+				return
+			}
 		}
 	}
 }
 
-//reads the http request to sends back the game code /
-func newWsConnection(conn *websocket.Conn) {
-	for {
-		gameId := 0
-		messageType, p, err := conn.ReadMessage()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		gameId++
-		log.Println(string(p))
-
-		// send the client the generated game code
-		if err := conn.WriteMessage(messageType, []byte(strconv.Itoa(newGameId()))); err != nil {
-			log.Println(err)
-		}
-	}
+func draw(numTiles int, tileBag *[]Tile) []Tile {
+	removedTiles := remove(tileBag, numTiles)
+	return removedTiles
 }
+
 func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
+func remove[T any](slice *[]T, s int) []T {
+	var removedTiles = (*slice)[:s]
+	*slice = (*slice)[s:]
+	return removedTiles
 }
 
 func main() {
@@ -170,7 +184,7 @@ func main() {
 	setupRoutes()
 	fmt.Println("Starting server at port at :" + os.Getenv("PORT"))
 	srv := http.Server{
-		Addr:         ":" + os.Getenv("PORT"),
+		Addr:         ":8080",
 		WriteTimeout: 1 * time.Minute,
 		ReadTimeout:  1 * time.Minute,
 	}
