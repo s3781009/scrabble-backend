@@ -50,7 +50,7 @@ func setupRoutes() {
 		if err != nil {
 			log.Println(err)
 		}
-		joinGame(ws)
+		joinGame(ws, games)
 	})
 
 	//sets up a web socket connection upgrading the http route
@@ -103,21 +103,42 @@ func loadTiles() []Tile {
 }
 
 //join game using message from client
-func joinGame(conn *websocket.Conn) {
+func joinGame(conn *websocket.Conn, games []Game) {
 	tiles := loadTiles()
-	jsonTiles, err := json.Marshal(tiles)
-	if err != nil {
-		log.Println(err)
-	}
+
 	for {
-		messageType, _, err := conn.ReadMessage()
+		jsonTiles, err := json.Marshal(tiles)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		// when user joins read in the game code and verify it against the current game codes
-		if err := conn.WriteMessage(messageType, jsonTiles); err != nil {
+
+		messageType, msg, err := conn.ReadMessage()
+
+		if err != nil {
 			log.Println(err)
+			return
+		}
+
+		gameCode, err := strconv.Atoi(string(msg))
+
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		for i := 0; i < len(games); i++ {
+			if games[i].Id == gameCode {
+				if err := conn.WriteMessage(messageType, jsonTiles); err != nil {
+					log.Println(err)
+					return
+				}
+			}
+		}
+
+		err = conn.WriteMessage(messageType, []byte("no game cod"))
+		if err != nil {
+			return
 		}
 	}
 }
