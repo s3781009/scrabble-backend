@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -18,8 +19,8 @@ var upgrader = websocket.Upgrader{
 }
 
 type Tile struct {
-	Char  rune `json:"char"`
-	Value int  `json:"value"`
+	Char  string `json:"char"`
+	Value int    `json:"value"`
 }
 type Player struct {
 	Name string `json:"name"`
@@ -33,7 +34,7 @@ type Game struct {
 
 //routes handlers
 func setupRoutes() {
-
+	var games []Game
 	//should allow players to play the game modifying the tiles in the tile bag
 	http.HandleFunc("/play", func(w http.ResponseWriter, r *http.Request) {
 		_, err := fmt.Fprintf(w, "Hello!")
@@ -59,6 +60,7 @@ func setupRoutes() {
 		if r.Method == "GET" {
 			//create an instance of the game and send json to client
 			game := Game{Players: nil, Board: nil, Id: newGameId()}
+			games = append(games, game)
 			jsonGame, err := json.Marshal(game)
 			if err != nil {
 				log.Println(err)
@@ -67,6 +69,9 @@ func setupRoutes() {
 			if err != nil {
 				log.Println(err)
 			}
+			upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+			ws, err := upgrader.Upgrade(w, r, nil)
+			joinGame(ws)
 		}
 	})
 }
@@ -80,16 +85,42 @@ func newGameId() int {
 	return gameCode
 }
 
+func loadTiles() []Tile {
+	file, err := os.ReadFile("ScrabbleTiles.txt")
+	if err != nil {
+		log.Println(err)
+	}
+	s := strings.Split(string(file), "\n")
+	var tiles []Tile
+	for _, v := range s {
+		char := string(v[0])
+		value, err := strconv.Atoi(v[2 : len(v)-1])
+		if err != nil {
+			log.Println(err)
+		}
+		tiles = append(tiles, Tile{Char: char, Value: value})
+	}
+	for _, v := range tiles {
+		fmt.Println(v)
+	}
+	return tiles
+}
+
 //join game using message from client
 func joinGame(conn *websocket.Conn) {
+	tiles := loadTiles()
+	jsonTiles, err := json.Marshal(tiles)
+	if err != nil {
+		log.Println(err)
+	}
 	for {
-		messageType, p, err := conn.ReadMessage()
+		messageType, _, err := conn.ReadMessage()
 		if err != nil {
 			log.Println(err)
 			return
 		}
 		// when user joins read in the game code and verify it against the current game codes
-		if err := conn.WriteMessage(messageType, p); err != nil {
+		if err := conn.WriteMessage(messageType, jsonTiles); err != nil {
 			log.Println(err)
 		}
 	}
