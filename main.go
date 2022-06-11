@@ -50,7 +50,6 @@ func setupRoutes() {
 		if err != nil {
 			log.Println(err)
 		}
-		log.Println("succesfully joined game ...")
 		joinGame(ws)
 	})
 
@@ -69,9 +68,6 @@ func setupRoutes() {
 			if err != nil {
 				log.Println(err)
 			}
-			upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-			ws, err := upgrader.Upgrade(w, r, nil)
-			joinGame(ws)
 		}
 	})
 }
