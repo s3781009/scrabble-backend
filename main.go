@@ -131,14 +131,10 @@ func wsHandler(conn *websocket.Conn, games *[]Game) {
 			log.Println(err)
 			return
 		}
-		gameCode, err := strconv.Atoi(string(msg))
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		gameCode := string(msg)
 		foundGameCode := false
 		for i := 0; i < len(*games); i++ {
-			if (*games)[i].Id == gameCode {
+			if strconv.Itoa((*games)[i].Id) == gameCode {
 				foundGameCode = true
 			}
 		}
