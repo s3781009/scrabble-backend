@@ -34,7 +34,7 @@ type Game struct {
 }
 
 func GetIPAndUserAgent(r *http.Request) (ip string, user_agent string) {
-	ip = r.RemoteAddr
+	ip = strings.Split(r.RemoteAddr, ":")[0]
 	user_agent = r.UserAgent()
 
 	return ip, user_agent
