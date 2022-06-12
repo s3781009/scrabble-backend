@@ -51,12 +51,13 @@ func setupRoutes() {
 	var games []Game
 	//sets up socket connection to allow user to enter a game code and verify the game code
 	http.HandleFunc("/join", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 		ws, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println(err)
 		}
-		enableCors(&w)
+
 		wsHandler(ws, &games)
 	})
 
@@ -113,6 +114,7 @@ func loadTiles() []Tile {
 }
 
 func join(player Player, games *[]Game, conn *websocket.Conn, messageType int) {
+	conn.c
 	foundGameCode := false
 	var currentGame *Game
 	for i := 0; i < len(*games); i++ {
