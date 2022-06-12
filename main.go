@@ -114,7 +114,6 @@ func loadTiles() []Tile {
 }
 
 func join(player Player, games *[]Game, conn *websocket.Conn, messageType int) {
-	conn.c
 	foundGameCode := false
 	var currentGame *Game
 	for i := 0; i < len(*games); i++ {
