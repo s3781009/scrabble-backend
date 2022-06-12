@@ -204,7 +204,7 @@ func main() {
 	setupRoutes()
 	fmt.Println("Starting server at port at :" + os.Getenv("PORT"))
 	srv := http.Server{
-		Addr:         ":8080",
+		Addr:         ":" + os.Getenv("PORT"),
 		WriteTimeout: 1 * time.Minute,
 		ReadTimeout:  1 * time.Minute,
 	}
