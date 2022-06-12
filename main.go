@@ -56,6 +56,7 @@ func setupRoutes() {
 		if err != nil {
 			log.Println(err)
 		}
+		enableCors(&w)
 		wsHandler(ws, &games)
 	})
 
@@ -208,7 +209,6 @@ func main() {
 		WriteTimeout: 1 * time.Minute,
 		ReadTimeout:  1 * time.Minute,
 	}
-
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
