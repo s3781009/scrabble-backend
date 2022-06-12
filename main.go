@@ -140,13 +140,14 @@ func join(player Player, games *[]Game, conn *websocket.Conn, messageType int) {
 		}
 		currentGame.Players = append(currentGame.Players, currentPlayer)
 		fmt.Printf("%#v", currentGame.Players)
-		jsonPlayer, err := json.Marshal(currentPlayer)
-		err = conn.WriteMessage(messageType, jsonPlayer)
-		if err != nil {
-			log.Println(err)
-			return
+		jsonPlayer, _ := json.Marshal(currentPlayer)
+		for _, player := range currentGame.Players {
+			err := player.Connection.WriteMessage(messageType, jsonPlayer)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 		}
-
 	} else {
 		err := conn.WriteMessage(messageType, []byte("not a valid game code"))
 		if err != nil {
