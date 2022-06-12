@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/shogo82148/go-shuffle"
 	"log"
 	"math/rand"
 	"net/http"
@@ -22,36 +23,32 @@ type Tile struct {
 	Char  string `json:"char"`
 	Value int    `json:"value"`
 }
+
 type Player struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
-	Hand []Tile `json:"hand"`
+	Connection *websocket.Conn //contains the web socket connection to allow for multi casting
+	Id         string          `json:"id"`
+	Action     string          `json:"action"`
+	Name       string          `json:"name"`
+	Hand       []Tile          `json:"hand"`
+	GamCode    string          `json:"gameCode"`
 }
+
 type Game struct {
 	Players []Player `json:"players"`
 	Board   []Tile   `json:"board"`
+	TileBag []Tile   `json:"tileBag"`
 	Id      int      `json:"id"`
 }
 
-func GetIPAndUserAgent(r *http.Request) (ip string, user_agent string) {
+func GetIPAndUserAgent(r *http.Request) (ip string) {
 	ip = strings.Split(r.RemoteAddr, ":")[0]
-	user_agent = r.UserAgent()
-
-	return ip, user_agent
+	return ip
 
 }
 
 //routes handlers
 func setupRoutes() {
 	var games []Game
-	//should allow players to play the game modifying the tiles in the tile bag
-	http.HandleFunc("/play", func(w http.ResponseWriter, r *http.Request) {
-		_, err := fmt.Fprintf(w, "Hello!")
-		if err != nil {
-			fmt.Println(err)
-		}
-	})
-
 	//sets up socket connection to allow user to enter a game code and verify the game code
 	http.HandleFunc("/join", func(w http.ResponseWriter, r *http.Request) {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -66,17 +63,10 @@ func setupRoutes() {
 	http.HandleFunc("/new", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
 		if r.Method == "GET" {
-			clientIP, _ := GetIPAndUserAgent(r)
 			//create an instance of the game and send json to client
-			fmt.Println(clientIP)
-			newPlayer := Player{
-				Id:   clientIP,
-				Name: "",
-				Hand: nil,
-			}
-			players := []Player{newPlayer}
+			var players []Player
 			var board []Tile
-			game := Game{Players: players, Board: board, Id: newGameId()}
+			game := Game{Players: players, Board: board, Id: newGameId(), TileBag: loadTiles()}
 			games = append(games, game)
 			jsonGame, err := json.Marshal(game)
 			if err != nil {
@@ -117,13 +107,57 @@ func loadTiles() []Tile {
 	for _, v := range tiles {
 		fmt.Println(v)
 	}
+	shuffle.Slice(tiles)
 	return tiles
 }
 
+func join(player Player, games *[]Game, conn *websocket.Conn, messageType int) {
+	foundGameCode := false
+	var currentGame *Game
+	for i := 0; i < len(*games); i++ {
+		if strconv.Itoa((*games)[i].Id) == player.GamCode {
+			currentGame = &(*games)[i]
+			foundGameCode = true
+		}
+	}
+	//same player cannot join twice
+	for _, player := range currentGame.Players {
+		if conn.RemoteAddr().String() == player.Id {
+			return
+		}
+	}
+	if foundGameCode {
+
+		replacementTiles := draw(7, &currentGame.TileBag)
+		currentPlayer := Player{
+			Name:       player.Name,
+			Hand:       replacementTiles,
+			Id:         conn.RemoteAddr().String(),
+			Connection: conn,
+			GamCode:    player.GamCode,
+		}
+		currentGame.Players = append(currentGame.Players, currentPlayer)
+		fmt.Printf("%#v", currentGame.Players)
+		jsonPlayer, err := json.Marshal(currentPlayer)
+		err = conn.WriteMessage(messageType, jsonPlayer)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+	} else {
+		err := conn.WriteMessage(messageType, []byte("not a valid game code"))
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
+}
+
 //join game using message from client
+//both intiar and joiner will use this function to connect
 func wsHandler(conn *websocket.Conn, games *[]Game) {
 	//tile bag should not be sent to the players to prevent cheating, initial loading of tile bag
-	tiles := loadTiles()
 	for {
 		//waits for message from client to execute the loop
 		messageType, msg, err := conn.ReadMessage()
@@ -131,34 +165,25 @@ func wsHandler(conn *websocket.Conn, games *[]Game) {
 			log.Println(err)
 			return
 		}
-		gameCode := string(msg)
-		foundGameCode := false
-		for i := 0; i < len(*games); i++ {
-			if strconv.Itoa((*games)[i].Id) == gameCode {
-				foundGameCode = true
-			}
+		var player Player
+		err = json.Unmarshal(msg, &player)
+		if err != nil {
+			log.Println(err)
 		}
-		if foundGameCode {
-			replacementTiles := draw(7, &tiles)
-			jsonPlayer, err := json.Marshal(
-				Player{
-					Name: "DEFAULT1",
-					Hand: replacementTiles,
-				},
-			)
-			err = conn.WriteMessage(messageType, jsonPlayer)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-		} else {
-			err = conn.WriteMessage(messageType, []byte("no game code found"))
-			if err != nil {
-				log.Println(err)
-				return
-			}
+		switch player.Action {
+		case "join":
+			join(player, games, conn, messageType)
+		case "place":
+			//todo
+		case "replace":
+			//todo
+		case "pass":
+			//todo
 		}
 	}
+}
+func place() {
+
 }
 
 func draw(numTiles int, tileBag *[]Tile) []Tile {
@@ -176,11 +201,10 @@ func remove[T any](slice *[]T, s int) []T {
 }
 
 func main() {
-
 	setupRoutes()
 	fmt.Println("Starting server at port at :" + os.Getenv("PORT"))
 	srv := http.Server{
-		Addr:         ":" + os.Getenv("PORT"),
+		Addr:         ":8080",
 		WriteTimeout: 1 * time.Minute,
 		ReadTimeout:  1 * time.Minute,
 	}
