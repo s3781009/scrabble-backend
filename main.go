@@ -122,13 +122,14 @@ func join(player Player, games *[]Game, conn *websocket.Conn, messageType int) {
 			foundGameCode = true
 		}
 	}
-	//same player cannot join twice
-	for _, player := range currentGame.Players {
-		if conn.RemoteAddr().String() == player.Id {
-			return
-		}
-	}
+
 	if foundGameCode {
+		//same player cannot join twice
+		for _, player := range currentGame.Players {
+			if conn.RemoteAddr().String() == player.Id {
+				return
+			}
+		}
 
 		replacementTiles := draw(7, &currentGame.TileBag)
 		currentPlayer := Player{
