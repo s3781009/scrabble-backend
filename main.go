@@ -31,6 +31,7 @@ type Player struct {
 	Name       string          `json:"name"`
 	Hand       []Tile          `json:"hand"`
 	GamCode    string          `json:"gameCode"`
+	Score      int             `json:"score"`
 }
 
 type Game struct {
@@ -138,6 +139,7 @@ func join(player Player, games *[]Game, conn *websocket.Conn, messageType int) {
 			Id:         conn.RemoteAddr().String(),
 			Connection: conn,
 			GamCode:    player.GamCode,
+			Score:      0,
 		}
 		currentGame.Players = append(currentGame.Players, currentPlayer)
 		fmt.Printf("%#v", currentGame.Players)
