@@ -183,15 +183,50 @@ func wsHandler(conn *websocket.Conn, games *[]Game) {
 		case "join":
 			join(player, games, conn, messageType)
 		case "place":
-			//todo
+			place(player, games, conn, messageType)
 		case "replace":
 			//todo
 		case "pass":
 			//todo
+		case "reconnect":
+			reconnect(player, games, conn, messageType)
 		}
 	}
 }
-func place() {
+func place(player Player, games *[]Game, conn *websocket.Conn, messageType int) {
+
+	currentGame := getGame(player, games)
+	jsonPlayer, err := json.Marshal(player)
+	if err != nil {
+		return
+	}
+	for _, p := range currentGame.Players {
+
+		err := p.Connection.WriteMessage(messageType, jsonPlayer)
+		if err != nil {
+			return
+		}
+	}
+}
+func getGame(player Player, games *[]Game) *Game {
+	var currentGame *Game
+	for _, game := range *games {
+		if strconv.Itoa(game.Id) == player.GamCode {
+			currentGame = &game
+		}
+	}
+	return currentGame
+}
+func resetConnection(currentGame *Game, player Player, conn *websocket.Conn) {
+	for _, p := range currentGame.Players {
+		if p.Name == player.Name {
+			p.Connection = conn
+		}
+	}
+}
+func reconnect(player Player, games *[]Game, conn *websocket.Conn, messageType int) {
+	currentGame := getGame(player, games)
+	resetConnection(currentGame, player, conn)
 
 }
 
