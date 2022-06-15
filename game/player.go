@@ -11,7 +11,7 @@ type Player struct {
 	GamCode    string `json:"gameCode"`
 	Score      int    `json:"score"`
 	Turn       bool   `json:"turn"`
-	TileBag    []Tile `json:"tileBag"`
+	Board      []Tile `json:"board"`
 }
 
 //place Tiles on the board and remove from tile bag

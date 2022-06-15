@@ -41,7 +41,11 @@ func join(player game.Player, games *[]game.Game, conn *websocket.Conn, messageT
 			GamCode:    player.GamCode,
 			Score:      0,
 		}
-
+		if len(currentGame.Players) == 1 {
+			currentPlayer.Turn = true
+		} else {
+			currentPlayer.Turn = false
+		}
 		currentGame.Players = append(currentGame.Players, currentPlayer)
 		jsonGame, _ := json.Marshal(currentGame)
 
@@ -111,7 +115,7 @@ func place(message game.Player, games *[]game.Game, conn *websocket.Conn, messag
 	newTiles := draw(7-len(message.Hand), &currentGame.TileBag)
 	for _, player := range currentGame.Players {
 		//update the tile bag for both players
-		player.TileBag = message.TileBag
+		player.Board = message.Board
 		if player.Name == message.Name {
 
 			player.Hand = append(message.Hand, newTiles...)
