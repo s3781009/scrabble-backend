@@ -4,14 +4,14 @@ import "github.com/gorilla/websocket"
 
 type Player struct {
 	Connection *websocket.Conn
-	Id         string `json:"id"`
-	Action     string `json:"action"`
-	Name       string `json:"name"`
-	Hand       []Tile `json:"hand"`
-	GamCode    string `json:"gameCode"`
-	Score      int    `json:"score"`
-	Turn       bool   `json:"turn"`
-	Board      []Tile `json:"board"`
+	Id         string      `json:"id"`
+	Action     string      `json:"action"`
+	Name       string      `json:"name"`
+	Hand       []Tile      `json:"hand"`
+	GamCode    string      `json:"gameCode"`
+	Score      int         `json:"score"`
+	Turn       bool        `json:"turn"`
+	Board      []BoardTile `json:"board"`
 }
 
 //place Tiles on the board and remove from tile bag

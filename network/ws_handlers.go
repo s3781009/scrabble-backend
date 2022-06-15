@@ -119,14 +119,19 @@ func place(message game.Player, games *[]game.Game, conn *websocket.Conn, messag
 		if player.Name == message.Name {
 
 			player.Hand = append(message.Hand, newTiles...)
-			jsonPlayer, _ := json.Marshal(player)
+			//set the player who has just placed the tile to have their turn off
+			player.Turn = false
 
-			for _, currentPlayer := range currentGame.Players {
-				err := currentPlayer.Connection.WriteMessage(messageType, jsonPlayer)
-				if err != nil {
-					return
-				}
-			}
+		} else {
+			player.Turn = true
+		}
+	}
+	jsonGame, _ := json.Marshal(currentGame)
+
+	for _, currentPlayer := range currentGame.Players {
+		err := currentPlayer.Connection.WriteMessage(messageType, jsonGame)
+		if err != nil {
+			return
 		}
 	}
 
