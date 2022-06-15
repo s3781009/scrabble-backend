@@ -51,9 +51,7 @@ func loadTiles() []Tile {
 		}
 		tiles = append(tiles, Tile{Char: char, Value: value})
 	}
-	for _, v := range tiles {
-		fmt.Println(v)
-	}
+
 	shuffle.Slice(tiles)
 	return tiles
 }

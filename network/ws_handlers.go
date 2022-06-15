@@ -13,6 +13,8 @@ import (
 func join(player game.Player, games *[]game.Game, conn *websocket.Conn, messageType int) {
 	foundGameCode := false
 	var currentGame *game.Game
+
+	//search fro the game code
 	for i := 0; i < len(*games); i++ {
 		if strconv.Itoa((*games)[i].Id) == player.GamCode {
 			currentGame = &(*games)[i]
@@ -21,9 +23,11 @@ func join(player game.Player, games *[]game.Game, conn *websocket.Conn, messageT
 	}
 
 	if foundGameCode {
+		fmt.Println("game code found")
 		//same player cannot join twice
 		for _, player := range currentGame.Players {
 			if conn.RemoteAddr().String() == player.Id {
+				fmt.Println("smae player")
 				return
 			}
 		}
@@ -37,11 +41,14 @@ func join(player game.Player, games *[]game.Game, conn *websocket.Conn, messageT
 			GamCode:    player.GamCode,
 			Score:      0,
 		}
+
 		currentGame.Players = append(currentGame.Players, currentPlayer)
-		fmt.Printf("%#v", currentGame.Players)
 		jsonGame, _ := json.Marshal(currentGame)
+
 		if len(currentGame.Players) == 2 {
+			fmt.Println("2 players joined")
 			for _, player := range currentGame.Players {
+
 				err := player.Connection.WriteMessage(messageType, jsonGame)
 				if err != nil {
 					log.Println(err)
@@ -52,6 +59,7 @@ func join(player game.Player, games *[]game.Game, conn *websocket.Conn, messageT
 
 	} else {
 		err := conn.WriteMessage(messageType, []byte("not a valid game code"))
+
 		if err != nil {
 			log.Println(err)
 			return
@@ -66,15 +74,20 @@ func wsHandler(conn *websocket.Conn, games *[]game.Game) {
 	for {
 		//waits for message from client to execute the loop
 		messageType, msg, err := conn.ReadMessage()
+		fmt.Println("message received")
 		if err != nil {
 			log.Println(err)
 			return
 		}
+
 		var player game.Player
 		err = json.Unmarshal(msg, &player)
+
 		if err != nil {
 			log.Println(err)
+			return
 		}
+
 		switch player.Action {
 		case "join":
 			join(player, games, conn, messageType)
@@ -89,20 +102,32 @@ func wsHandler(conn *websocket.Conn, games *[]game.Game) {
 		}
 	}
 }
-func place(player game.Player, games *[]game.Game, conn *websocket.Conn, messageType int) {
-	currentGame := getGame(player, games)
-	jsonPlayer, err := json.Marshal(player)
-	if err != nil {
-		return
-	}
-	for _, p := range currentGame.Players {
 
-		err := p.Connection.WriteMessage(messageType, jsonPlayer)
-		if err != nil {
-			return
+func place(message game.Player, games *[]game.Game, conn *websocket.Conn, messageType int) {
+
+	currentGame := getGame(message, games)
+
+	//reset player hand to 7 cards by drawing from the tile bag
+	newTiles := draw(7-len(message.Hand), &currentGame.TileBag)
+	for _, player := range currentGame.Players {
+		//update the tile bag for both players
+		player.TileBag = message.TileBag
+		if player.Name == message.Name {
+
+			player.Hand = append(message.Hand, newTiles...)
+			jsonPlayer, _ := json.Marshal(player)
+
+			for _, currentPlayer := range currentGame.Players {
+				err := currentPlayer.Connection.WriteMessage(messageType, jsonPlayer)
+				if err != nil {
+					return
+				}
+			}
 		}
 	}
+
 }
+
 func getGame(player game.Player, games *[]game.Game) *game.Game {
 	var currentGame *game.Game
 	for _, g := range *games {
@@ -112,16 +137,19 @@ func getGame(player game.Player, games *[]game.Game) *game.Game {
 	}
 	return currentGame
 }
-func resetConnection(currentGame *game.Game, player game.Player, conn *websocket.Conn) {
+
+func reconnect(player game.Player, games *[]game.Game, conn *websocket.Conn, messageType int) {
+	currentGame := getGame(player, games)
 	for _, p := range currentGame.Players {
 		if p.Name == player.Name {
 			p.Connection = conn
 		}
 	}
-}
-func reconnect(player game.Player, games *[]game.Game, conn *websocket.Conn, messageType int) {
-	currentGame := getGame(player, games)
-	resetConnection(currentGame, player, conn)
+	err := conn.WriteMessage(messageType, []byte("reconnected"))
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 }
 

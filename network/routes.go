@@ -35,10 +35,10 @@ func SetupRoutes() {
 	http.HandleFunc("/new", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
 		if r.Method == "GET" {
-			//create an instance of the game and send json to client
-			game := game.NewGame()
-			games = append(games, game)
-			jsonGame, err := json.Marshal(game)
+			//create an instance of the newGame and send json to client
+			newGame := game.NewGame()
+			games = append(games, newGame)
+			jsonGame, err := json.Marshal(newGame)
 			if err != nil {
 				log.Println(err)
 			}

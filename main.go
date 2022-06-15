@@ -16,14 +16,18 @@ func remove[T any](slice *[]T, s int) []T {
 }
 
 func main() {
+
 	network.SetupRoutes()
 	fmt.Println("Starting server at port at :" + os.Getenv("PORT"))
+
 	srv := http.Server{
 		Addr:         ":8080",
 		WriteTimeout: 1 * time.Minute,
 		ReadTimeout:  1 * time.Minute,
 	}
+
 	if err := srv.ListenAndServe(); err != nil {
+
 		log.Fatal(err)
 	}
 }
