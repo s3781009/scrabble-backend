@@ -154,7 +154,8 @@ func reconnect(player game.Player, games *[]game.Game, conn *websocket.Conn, mes
 			p.Connection = conn
 		}
 	}
-	err := conn.WriteMessage(messageType, []byte("reconnected"))
+	jsonGame, _ := json.Marshal(currentGame)
+	err := conn.WriteMessage(messageType, jsonGame)
 	if err != nil {
 		log.Println(err)
 		return
