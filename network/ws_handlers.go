@@ -93,7 +93,6 @@ func wsHandler(conn *websocket.Conn, games *[]game.Game) {
 		//go sindPing()
 		//waits for message from client to execute the loop
 		messageType, msg, err := conn.ReadMessage()
-		fmt.Println("message received")
 		if err != nil {
 			log.Println(err)
 			return
@@ -152,7 +151,11 @@ func place(message game.Player, games *[]game.Game, conn *websocket.Conn, messag
 			player.Turn = true
 		}
 		jsonHand, _ := json.Marshal(player.Hand)
-		player.Connection.WriteMessage(messageType, jsonHand)
+		err := player.Connection.WriteMessage(messageType, jsonHand)
+		if err != nil {
+			log.Println("coudl not send hand")
+			return
+		}
 	}
 
 }
