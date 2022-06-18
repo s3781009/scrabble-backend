@@ -8,6 +8,7 @@ import (
 	"scrabble-backend/game"
 	"scrabble-backend/utils"
 	"strconv"
+	"time"
 )
 
 func join(player game.Player, games *[]game.Game, conn *websocket.Conn, messageType int) {
@@ -76,6 +77,21 @@ func join(player game.Player, games *[]game.Game, conn *websocket.Conn, messageT
 func wsHandler(conn *websocket.Conn, games *[]game.Game) {
 	//tile bag should not be sent to the players to prevent cheating, initial loading of tile bag
 	for {
+		var sindPing = func() {
+			for {
+				time.AfterFunc(3*time.Second, func() {
+					for _, game := range *games {
+						for _, player := range game.Players {
+							if player.Connection != nil {
+								msg := []byte("hello")
+								player.Connection.WriteMessage(1, msg)
+							}
+						}
+					}
+				})
+			}
+		}
+		go sindPing()
 		//waits for message from client to execute the loop
 		messageType, msg, err := conn.ReadMessage()
 		fmt.Println("message received")
