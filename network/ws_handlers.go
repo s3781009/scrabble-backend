@@ -150,11 +150,11 @@ func place(message game.Player, games *[]game.Game, conn *websocket.Conn, messag
 		} else {
 			player.Turn = true
 		}
-		jsonHand, _ := json.Marshal(player.Hand)
-		err := player.Connection.WriteMessage(messageType, jsonHand)
-		log.Println("sent hand")
+		jsonGame, _ := json.Marshal(currentGame)
+		err := player.Connection.WriteMessage(messageType, jsonGame)
+		log.Println("sent updated game")
 		if err != nil {
-			log.Println("coudl not send hand")
+			log.Println("could not send updated hand")
 			return
 		}
 	}
