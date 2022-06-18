@@ -170,6 +170,7 @@ func getGame(player game.Player, games *[]game.Game) *game.Game {
 func reconnect(player game.Player, games *[]game.Game, conn *websocket.Conn, messageType int) {
 	currentGame := getGame(player, games)
 	for _, p := range currentGame.Players {
+		fmt.Println(player.Name)
 		if p.Name == player.Name {
 			p.Connection = conn
 			fmt.Println("reconnected")
