@@ -152,6 +152,7 @@ func place(message game.Player, games *[]game.Game, conn *websocket.Conn, messag
 		}
 		jsonHand, _ := json.Marshal(player.Hand)
 		err := player.Connection.WriteMessage(messageType, jsonHand)
+		log.Println("sent hand")
 		if err != nil {
 			log.Println("coudl not send hand")
 			return
@@ -179,12 +180,6 @@ func reconnect(player game.Player, games *[]game.Game, conn *websocket.Conn, mes
 			p.Connection = conn
 			fmt.Println("reconnected")
 		}
-	}
-	jsonGame, _ := json.Marshal(currentGame)
-	err := conn.WriteMessage(messageType, jsonGame)
-	if err != nil {
-		log.Println(err)
-		return
 	}
 
 }
